@@ -1,0 +1,23 @@
+{
+  "name": "unigive",
+  "version": "1.0.0",
+  "description": "UniGive - Verified Campus Peer-to-Peer Redistribution System",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install"
+  },
+  "keywords": [
+    "campus-exchange",
+    "peer-to-peer",
+    "sustainability",
+    "react",
+    "express",
+    "postgresql"
+  ],
+  "author": "Altamash, Abhishek, Afifa, Abhinav",
+  "license": "ISC",
+  "devDependencies": {
+    "agentation": "^3.1.2"
+  }
+}
