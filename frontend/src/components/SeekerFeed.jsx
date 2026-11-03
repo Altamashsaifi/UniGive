@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HeartHandshake, Instagram, ExternalLink, Mail, Plus, MessageCircle } from 'lucide-react';
+import { HeartHandshake, Instagram, ExternalLink, Mail, Plus, MessageCircle, Trash2, Shield } from 'lucide-react';
 
 const CATEGORY_NAMES = {
   BOOKS: 'Textbook / Notes',
@@ -9,8 +9,11 @@ const CATEGORY_NAMES = {
   OTHER: 'General',
 };
 
-export default function SeekerFeed({ requests, onOpenCreateRequest, currentUser, onRequireAuth }) {
+export default function SeekerFeed({ requests, onOpenCreateRequest, currentUser, onRequireAuth, onDeleteRequest }) {
   const [activeContactId, setActiveContactId] = useState(null);
+  const [adminDeleteId, setAdminDeleteId] = useState(null);
+
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   const handleContactSeekerClick = (reqId) => {
     if (!currentUser) {
@@ -91,13 +94,47 @@ export default function SeekerFeed({ requests, onOpenCreateRequest, currentUser,
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleContactSeekerClick(req.id)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white transition shadow-sm"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Contact Seeker</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <div>
+                      {adminDeleteId === req.id ? (
+                        <div className="flex items-center gap-1 animate-fadeIn">
+                          <button
+                            onClick={() => {
+                              if (onDeleteRequest) onDeleteRequest(req.id);
+                              setAdminDeleteId(null);
+                            }}
+                            className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-bold shadow-xs transition"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => setAdminDeleteId(null)}
+                            className="px-1.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px]"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAdminDeleteId(req.id)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                          title="Admin Moderation: Delete this request"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => handleContactSeekerClick(req.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white transition shadow-sm"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Contact Seeker</span>
+                  </button>
+                </div>
               </div>
 
               {/* Contact Reveal Tray */}

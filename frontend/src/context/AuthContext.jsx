@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { api, checkBackendHealth } from '../services/api';
 
 const AuthContext = createContext();
@@ -9,32 +10,160 @@ export const AuthProvider = ({ children }) => {
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { return null; }
     }
-    // Default logged-in student (Altamash Saifi - Project Lead)
-    return {
-      id: '11111111-1111-4111-a111-111111111111',
-      full_name: 'Altamash Saifi',
-      email: 'altamash@college.ac.in',
-      department: 'Computer Science & Engineering',
-      semester: 5,
-      social_handle: '@altamash_dev',
-      phone: '+91 98765 43210',
-      hostel_block: 'Hostel B, Room 214',
-      bio: '5th Sem CSE student passionate about open source and campus sustainability.',
-      role: 'STUDENT',
-      is_verified: true,
-    };
+    // If Supabase is not configured, supply default demo student for zero-friction local exploration
+    if (!isSupabaseConfigured) {
+      return {
+        id: '11111111-1111-4111-a111-111111111111',
+        full_name: 'Altamash Saifi',
+        email: 'altamash@college.ac.in',
+        department: 'Computer Science & Engineering',
+        semester: 5,
+        social_handle: '@altamash_dev',
+        phone: '+91 98765 43210',
+        hostel_block: 'Hostel B, Room 214',
+        bio: '5th Sem CSE student passionate about open source and campus sustainability.',
+        role: 'STUDENT',
+        is_verified: true,
+      };
+    }
+    return null;
   });
 
-  const [token, setToken] = useState(() => localStorage.getItem('unigive_token') || 'demo-jwt-token');
-  const [backendStatus, setBackendStatus] = useState('checking');
+  const [token, setToken] = useState(() => localStorage.getItem('unigive_token') || (!isSupabaseConfigured ? 'demo-jwt-token' : null));
+  const [backendStatus, setBackendStatus] = useState(isSupabaseConfigured ? 'supabase' : 'checking');
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+
+  // Helper to fetch profile from Supabase
+  const fetchSupabaseProfile = async (authUser) => {
+    if (!authUser || !supabase) return null;
+    try {
+      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '')
+        .toLowerCase()
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+      const isWhitelistedAdmin = Boolean(
+        authUser.email && adminEmails.includes(authUser.email.toLowerCase().trim())
+      );
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Error fetching Supabase profile:', error);
+      }
+
+      const profile = data || {};
+      const metadata = authUser.user_metadata || {};
+      const effectiveRole = isWhitelistedAdmin ? 'ADMIN' : (profile.role || metadata.role || 'STUDENT');
+
+      // If whitelisted as admin, sync database role to ADMIN
+      if (isWhitelistedAdmin && profile.role !== 'ADMIN') {
+        supabase
+          .from('profiles')
+          .update({ role: 'ADMIN', is_verified: true, updated_at: new Date().toISOString() })
+          .eq('id', authUser.id)
+          .then(() => {});
+      }
+
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: profile.full_name || metadata.full_name || authUser.email.split('@')[0],
+        department: profile.department || metadata.department || (isWhitelistedAdmin ? 'Campus Administration' : 'Engineering'),
+        semester: profile.semester || metadata.semester || 1,
+        social_handle: profile.social_handle || metadata.social_handle || '',
+        phone: profile.phone || metadata.phone || '',
+        hostel_block: profile.hostel_block || metadata.hostel_block || '',
+        bio: profile.bio || metadata.bio || '',
+        role: effectiveRole,
+        is_verified: true,
+      };
+    } catch (err) {
+      console.error('Failed to load user profile from Supabase:', err);
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.user_metadata?.full_name || authUser.email.split('@')[0],
+        department: authUser.user_metadata?.department || 'Engineering',
+        semester: authUser.user_metadata?.semester || 1,
+      };
+    }
+  };
 
   useEffect(() => {
-    checkBackendHealth().then((live) => {
-      setBackendStatus(live ? 'online' : 'offline');
-    });
+    if (isSupabaseConfigured && supabase) {
+      // 1. Get initial active session
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user) {
+          const profile = await fetchSupabaseProfile(session.user);
+          setUser(profile);
+          setToken(session.access_token);
+          localStorage.setItem('unigive_user', JSON.stringify(profile));
+          localStorage.setItem('unigive_token', session.access_token);
+        } else {
+          // If no active Supabase session, clear local storage
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('unigive_user');
+          localStorage.removeItem('unigive_token');
+        }
+        setLoading(false);
+      });
+
+      // 2. Listen to live Supabase Auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          const profile = await fetchSupabaseProfile(session.user);
+          setUser(profile);
+          setToken(session.access_token);
+          localStorage.setItem('unigive_user', JSON.stringify(profile));
+          localStorage.setItem('unigive_token', session.access_token);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('unigive_user');
+          localStorage.removeItem('unigive_token');
+        }
+        setLoading(false);
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } else {
+      // If Supabase not yet configured, check local backend server health
+      checkBackendHealth().then((live) => {
+        setBackendStatus(live ? 'online' : 'offline');
+      });
+      setLoading(false);
+    }
   }, []);
 
   const login = async (email, password) => {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const profile = await fetchSupabaseProfile(data.user);
+      setUser(profile);
+      setToken(data.session.access_token);
+      localStorage.setItem('unigive_user', JSON.stringify(profile));
+      localStorage.setItem('unigive_token', data.session.access_token);
+      return { success: true, user: profile, token: data.session.access_token };
+    }
+
+    // Fallback if Supabase credentials are not added yet
     const res = await api.login(email, password);
     setUser(res.user);
     setToken(res.token);
@@ -44,6 +173,55 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
+    const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '')
+      .toLowerCase()
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+    const isWhitelistedAdmin = Boolean(
+      userData.email && adminEmails.includes(userData.email.toLowerCase().trim())
+    );
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.full_name,
+            department: userData.department || (isWhitelistedAdmin ? 'Campus Administration' : 'Engineering'),
+            semester: userData.semester || 1,
+            social_handle: userData.social_handle || '',
+            role: isWhitelistedAdmin ? 'ADMIN' : 'STUDENT',
+            is_admin: isWhitelistedAdmin,
+          },
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // If email confirmation is required by Supabase free tier settings
+      if (data.user && !data.session) {
+        return {
+          success: true,
+          confirmationRequired: true,
+          message: 'Registration successful! Please check your campus email to confirm your account, or sign in.',
+          user: data.user,
+        };
+      }
+
+      const profile = await fetchSupabaseProfile(data.user);
+      setUser(profile);
+      setToken(data.session?.access_token || null);
+      if (profile) localStorage.setItem('unigive_user', JSON.stringify(profile));
+      if (data.session?.access_token) localStorage.setItem('unigive_token', data.session.access_token);
+      return { success: true, user: profile, token: data.session?.access_token };
+    }
+
+    // Fallback if Supabase credentials are not added yet
     const res = await api.register(userData);
     setUser(res.user);
     setToken(res.token);
@@ -53,6 +231,34 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (profileData) => {
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileData.full_name,
+          department: profileData.department,
+          semester: profileData.semester,
+          social_handle: profileData.social_handle,
+          phone: profileData.phone,
+          hostel_block: profileData.hostel_block,
+          bio: profileData.bio,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Supabase profile update warning:', error);
+      }
+
+      const merged = { ...user, ...profileData, ...(data || {}) };
+      setUser(merged);
+      localStorage.setItem('unigive_user', JSON.stringify(merged));
+      return merged;
+    }
+
+    // Fallback update
     const updated = await api.updateProfile(token, profileData);
     const merged = { ...user, ...profileData, ...updated };
     setUser(merged);
@@ -60,7 +266,14 @@ export const AuthProvider = ({ children }) => {
     return merged;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn('Supabase signOut error:', err);
+      }
+    }
     setUser(null);
     setToken(null);
     localStorage.removeItem('unigive_user');
@@ -68,7 +281,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, updateProfile, backendStatus }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        register,
+        logout,
+        updateProfile,
+        backendStatus,
+        loading,
+        isSupabaseConfigured,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -258,6 +258,7 @@ export default function App() {
             currentUser={user}
             onOpenCreateRequest={() => (user ? setIsCreateRequestOpen(true) : handleRequireAuth('Please sign in to post a request.'))}
             onRequireAuth={handleRequireAuth}
+            onDeleteRequest={handleDeleteRequest}
           />
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Building, Instagram, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,21 @@ export default function EditProfileModal({ isOpen, onClose }) {
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Sync form inputs with active profile every time modal opens or user data changes
+  useEffect(() => {
+    if (isOpen && user) {
+      setFormData({
+        full_name: user.full_name || '',
+        department: user.department || 'Computer Science & Engineering',
+        semester: user.semester || 1,
+        hostel_block: user.hostel_block || '',
+        social_handle: user.social_handle || '',
+        bio: user.bio || '',
+      });
+      setSuccess(false);
+    }
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
@@ -136,8 +151,11 @@ export default function EditProfileModal({ isOpen, onClose }) {
               <input
                 type="text"
                 placeholder="your_instagram_handle"
-                value={formData.social_handle.replace(/^@/, '')}
-                onChange={(e) => setFormData({ ...formData, social_handle: '@' + e.target.value.replace(/^@/, '').trim() })}
+                value={(formData.social_handle || '').replace(/^@/, '')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/^@/, '').trim();
+                  setFormData({ ...formData, social_handle: val ? '@' + val : '' });
+                }}
                 className="w-full pl-8 pr-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
               />
             </div>

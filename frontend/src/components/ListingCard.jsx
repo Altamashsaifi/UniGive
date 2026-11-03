@@ -11,7 +11,9 @@ import {
   RefreshCw,
   IndianRupee,
   Building,
-  Instagram
+  Instagram,
+  Trash2,
+  Shield
 } from 'lucide-react';
 
 const CONDITION_COLORS = {
@@ -31,12 +33,15 @@ const CATEGORY_NAMES = {
 
 export default function ListingCard({ listing, currentUser, onUpdateStatus, onDeleteListing, onRequireAuth }) {
   const [showContactModal, setShowContactModal] = useState(false);
+  const [confirmAdminDelete, setConfirmAdminDelete] = useState(false);
 
   // Strict check: only the giver who posted this item can change its availability
   const isGiver =
     currentUser &&
     (currentUser.id === listing.donor_id ||
       (currentUser.email && listing.donor_email && currentUser.email.toLowerCase() === listing.donor_email.toLowerCase()));
+
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   // Requirement 2: When clicking contact giver, if not signed in, tell them to sign in first
   const handleContactClick = () => {
@@ -195,33 +200,60 @@ export default function ListingCard({ listing, currentUser, onUpdateStatus, onDe
               </div>
             </div>
 
-            {/* Requirement 2 & 6:
-                - If current user is the giver: Show Availability Selector
-                - If not the giver: Show ONLY ONE single Contact Giver button
-            */}
-            {isGiver ? (
-              <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-xl border border-emerald-200">
-                <span className="text-[10px] font-bold text-emerald-800">Status:</span>
-                <select
-                  value={listing.status}
-                  onChange={(e) => onUpdateStatus && onUpdateStatus(listing.id, e.target.value)}
-                  className="text-xs font-bold bg-white text-emerald-900 border border-emerald-300 rounded-lg px-2 py-0.5 focus:outline-none cursor-pointer"
+            {/* Actions for Giver vs Non-Giver + Admin Moderation */}
+            <div className="flex items-center gap-2">
+              {isAdmin && !isGiver && (
+                <div className="flex items-center gap-1 pl-1 border-r border-slate-200 pr-2">
+                  {confirmAdminDelete ? (
+                    <div className="flex items-center gap-1 animate-fadeIn">
+                      <button
+                        onClick={() => onDeleteListing && onDeleteListing(listing.id)}
+                        className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-bold shadow-xs transition"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmAdminDelete(false)}
+                        className="px-1.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px]"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmAdminDelete(true)}
+                      className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                      title="Admin Moderation: Delete this listing"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {isGiver ? (
+                <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-xl border border-emerald-200">
+                  <span className="text-[10px] font-bold text-emerald-800">Status:</span>
+                  <select
+                    value={listing.status}
+                    onChange={(e) => onUpdateStatus && onUpdateStatus(listing.id, e.target.value)}
+                    className="text-xs font-bold bg-white text-emerald-900 border border-emerald-300 rounded-lg px-2 py-0.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="AVAILABLE">Available</option>
+                    <option value="RESERVED">Reserved</option>
+                    <option value="CLAIMED">Claimed</option>
+                  </select>
+                </div>
+              ) : (
+                <button
+                  onClick={handleContactClick}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-[0.96] text-white shadow-sm transition-all duration-150"
                 >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="RESERVED">Reserved</option>
-                  <option value="CLAIMED">Claimed</option>
-                </select>
-              </div>
-            ) : (
-              /* Requirement 6: ONLY ONE Contact Giver button on the card */
-              <button
-                onClick={handleContactClick}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-[0.96] text-white shadow-sm transition-all duration-150"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span>Contact Giver</span>
-              </button>
-            )}
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Contact Giver</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

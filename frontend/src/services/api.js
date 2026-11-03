@@ -1,5 +1,7 @@
 // UniGive Frontend API Client
-// Connects to Express REST APIs with fallback to LocalStorage/Mock Data
+// Connects to Supabase Cloud Database & Auth, with seamless fallback to Express / LocalStorage
+
+import { supabase, isSupabaseConfigured } from './supabase';
 
 const API_BASE = '/api';
 
@@ -166,9 +168,11 @@ function setLocalData(key, data) {
 }
 
 let isBackendLive = false;
+
 export async function checkBackendHealth() {
+  if (isSupabaseConfigured) return true;
   try {
-    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(1500) });
+    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(1200) });
     isBackendLive = res.ok;
     return isBackendLive;
   } catch (e) {
@@ -178,6 +182,31 @@ export async function checkBackendHealth() {
 }
 
 export const api = {
+  // Upload item photo to Supabase Free Tier storage bucket ('item-photos')
+  async uploadItemPhoto(file) {
+    if (isSupabaseConfigured && supabase && file) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `items/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('item-photos')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+        if (!uploadError) {
+          const { data } = supabase.storage.from('item-photos').getPublicUrl(filePath);
+          return data.publicUrl;
+        } else {
+          console.warn('Supabase storage upload error:', uploadError);
+        }
+      } catch (err) {
+        console.warn('Storage upload failed:', err);
+      }
+    }
+    return null;
+  },
+
   async register(data) {
     try {
       if (isBackendLive) {
@@ -236,7 +265,6 @@ export const api = {
       console.warn('Backend login error, using verified campus demo fallback:', err);
     }
 
-    // Reliable fallback for smooth student login
     const mockUser = {
       id: '11111111-1111-4111-a111-111111111111',
       full_name: 'Altamash Saifi',
@@ -275,6 +303,71 @@ export const api = {
   },
 
   async getListings(token, filters = {}) {
+    // 1. Supabase Cloud Database Query
+    if (isSupabaseConfigured && supabase) {
+      try {
+        let query = supabase
+          .from('listings')
+          .select(`
+            id,
+            donor_id,
+            title,
+            description,
+            category,
+            condition,
+            give_type,
+            price,
+            exchange_for,
+            image_url,
+            pickup_location,
+            status,
+            created_at,
+            profiles:donor_id (
+              full_name,
+              email,
+              department,
+              social_handle,
+              hostel_block
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (filters.category && filters.category !== 'ALL') {
+          query = query.eq('category', filters.category);
+        }
+        if (filters.status && filters.status !== 'ALL') {
+          query = query.eq('status', filters.status);
+        }
+        if (filters.condition) {
+          query = query.eq('condition', filters.condition);
+        }
+        if (filters.donor_id) {
+          query = query.eq('donor_id', filters.donor_id);
+        }
+        if (filters.search) {
+          const q = `%${filters.search}%`;
+          query = query.or(`title.ilike.${q},description.ilike.${q},pickup_location.ilike.${q},exchange_for.ilike.${q}`);
+        }
+
+        const { data, error } = await query;
+        if (!error && Array.isArray(data)) {
+          return data.map((item) => ({
+            ...item,
+            donor_name: item.profiles?.full_name || 'Campus Student',
+            donor_email: item.profiles?.email || '',
+            donor_department: item.profiles?.department || '',
+            donor_social_handle: item.profiles?.social_handle || '',
+            donor_hostel_block: item.profiles?.hostel_block || '',
+          }));
+        } else if (error) {
+          console.warn('Supabase getListings error, falling back:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase query error:', err);
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const params = new URLSearchParams();
@@ -296,6 +389,7 @@ export const api = {
       console.warn('Backend getListings failed, using local storage:', e);
     }
 
+    // 3. LocalStorage Fallback
     let list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     if (filters.donor_id) {
       list = list.filter((i) => i.donor_id === filters.donor_id);
@@ -323,6 +417,58 @@ export const api = {
   },
 
   async createListing(token, listingData, currentUser) {
+    // 1. Supabase Cloud Database Insert
+    if (isSupabaseConfigured && supabase && currentUser?.id) {
+      try {
+        const payload = {
+          donor_id: currentUser.id,
+          title: listingData.title,
+          description: listingData.description || '',
+          category: listingData.category,
+          condition: listingData.condition,
+          give_type: listingData.give_type || 'FREE',
+          price: listingData.give_type === 'AMOUNT' ? parseFloat(listingData.price) || 0 : 0,
+          exchange_for: listingData.give_type === 'BARTER' ? listingData.exchange_for : null,
+          image_url: listingData.image_url || '',
+          pickup_location: listingData.pickup_location,
+          status: 'AVAILABLE',
+        };
+
+        const { data, error } = await supabase
+          .from('listings')
+          .insert(payload)
+          .select(`
+            *,
+            profiles:donor_id (
+              full_name,
+              email,
+              department,
+              social_handle,
+              hostel_block
+            )
+          `)
+          .single();
+
+        if (!error && data) {
+          return {
+            ...data,
+            donor_name: data.profiles?.full_name || currentUser.full_name,
+            donor_email: data.profiles?.email || currentUser.email,
+            donor_department: data.profiles?.department || currentUser.department,
+            donor_social_handle: data.profiles?.social_handle || currentUser.social_handle,
+            donor_hostel_block: data.profiles?.hostel_block || currentUser.hostel_block,
+          };
+        } else if (error) {
+          console.warn('Supabase createListing error:', error);
+          throw new Error(error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase createListing error:', err);
+        throw err;
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/listings`, {
@@ -342,6 +488,7 @@ export const api = {
       console.warn('Backend createListing failed, saving locally:', e);
     }
 
+    // 3. LocalStorage Fallback
     const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     const newListing = {
       id: 'l-' + Date.now(),
@@ -363,8 +510,28 @@ export const api = {
     return newListing;
   },
 
-  // Never block or crash status update!
   async updateListingStatus(token, id, status) {
+    // 1. Supabase Cloud Database Status Update
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('listings')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          return data;
+        } else if (error) {
+          console.warn('Supabase updateListingStatus error:', error);
+        }
+      } catch (err) {
+        console.warn('Supabase status update failed:', err);
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/listings/${id}`, {
@@ -377,7 +544,6 @@ export const api = {
         });
         if (res.ok) {
           const json = await res.json();
-          // Also sync to local storage
           const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
           const target = list.find((i) => i.id === id);
           if (target) {
@@ -391,7 +557,7 @@ export const api = {
       console.warn('Backend updateListingStatus failed, updating local storage:', e);
     }
 
-    // Local fallback ensures status ALWAYS changes without errors
+    // 3. LocalStorage Fallback
     const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     const target = list.find((i) => i.id === id);
     if (target) {
@@ -402,6 +568,18 @@ export const api = {
   },
 
   async deleteListing(token, id) {
+    // 1. Supabase Cloud Database Delete
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase.from('listings').delete().eq('id', id);
+        if (!error) return true;
+        console.warn('Supabase deleteListing error:', error);
+      } catch (err) {
+        console.warn('Supabase deleteListing failed:', err);
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/listings/${id}`, {
@@ -419,6 +597,7 @@ export const api = {
       console.warn('Backend deleteListing failed, updating local storage:', e);
     }
 
+    // 3. LocalStorage Fallback
     const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     const updated = list.filter((i) => i.id !== id);
     setLocalData('unigive_listings', updated);
@@ -426,6 +605,57 @@ export const api = {
   },
 
   async getRequests(token, filters = {}) {
+    // 1. Supabase Cloud Database Query
+    if (isSupabaseConfigured && supabase) {
+      try {
+        let query = supabase
+          .from('requests')
+          .select(`
+            id,
+            seeker_id,
+            title,
+            description,
+            category,
+            is_fulfilled,
+            created_at,
+            profiles:seeker_id (
+              full_name,
+              email,
+              department,
+              social_handle
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (filters.category && filters.category !== 'ALL') {
+          query = query.eq('category', filters.category);
+        }
+        if (filters.seeker_id) {
+          query = query.eq('seeker_id', filters.seeker_id);
+        }
+        if (filters.search) {
+          const q = `%${filters.search}%`;
+          query = query.or(`title.ilike.${q},description.ilike.${q}`);
+        }
+
+        const { data, error } = await query;
+        if (!error && Array.isArray(data)) {
+          return data.map((req) => ({
+            ...req,
+            seeker_name: req.profiles?.full_name || 'Campus Student',
+            seeker_email: req.profiles?.email || '',
+            seeker_department: req.profiles?.department || '',
+            seeker_social_handle: req.profiles?.social_handle || '',
+          }));
+        } else if (error) {
+          console.warn('Supabase getRequests error, falling back:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase query error:', err);
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const params = new URLSearchParams();
@@ -445,6 +675,7 @@ export const api = {
       console.warn('Backend getRequests failed, using local storage:', e);
     }
 
+    // 3. LocalStorage Fallback
     let list = getLocalData('unigive_requests', INITIAL_REQUESTS);
     if (filters.seeker_id) {
       list = list.filter((i) => i.seeker_id === filters.seeker_id);
@@ -464,6 +695,49 @@ export const api = {
   },
 
   async createRequest(token, requestData, currentUser) {
+    // 1. Supabase Cloud Database Insert
+    if (isSupabaseConfigured && supabase && currentUser?.id) {
+      try {
+        const payload = {
+          seeker_id: currentUser.id,
+          title: requestData.title,
+          description: requestData.description || '',
+          category: requestData.category,
+        };
+
+        const { data, error } = await supabase
+          .from('requests')
+          .insert(payload)
+          .select(`
+            *,
+            profiles:seeker_id (
+              full_name,
+              email,
+              department,
+              social_handle
+            )
+          `)
+          .single();
+
+        if (!error && data) {
+          return {
+            ...data,
+            seeker_name: data.profiles?.full_name || currentUser.full_name,
+            seeker_email: data.profiles?.email || currentUser.email,
+            seeker_department: data.profiles?.department || currentUser.department,
+            seeker_social_handle: data.profiles?.social_handle || currentUser.social_handle,
+          };
+        } else if (error) {
+          console.warn('Supabase createRequest error:', error);
+          throw new Error(error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase createRequest error:', err);
+        throw err;
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/requests`, {
@@ -483,6 +757,7 @@ export const api = {
       console.warn('Backend createRequest failed, saving locally:', e);
     }
 
+    // 3. LocalStorage Fallback
     const list = getLocalData('unigive_requests', INITIAL_REQUESTS);
     const newReq = {
       id: 'r-' + Date.now(),
@@ -501,6 +776,18 @@ export const api = {
   },
 
   async deleteRequest(token, id) {
+    // 1. Supabase Cloud Database Delete
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase.from('requests').delete().eq('id', id);
+        if (!error) return true;
+        console.warn('Supabase deleteRequest error:', error);
+      } catch (err) {
+        console.warn('Supabase deleteRequest failed:', err);
+      }
+    }
+
+    // 2. Express Backend Fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/requests/${id}`, {
@@ -518,6 +805,7 @@ export const api = {
       console.warn('Backend deleteRequest failed, removing locally:', e);
     }
 
+    // 3. LocalStorage Fallback
     const list = getLocalData('unigive_requests', INITIAL_REQUESTS);
     const updated = list.filter((i) => i.id !== id);
     setLocalData('unigive_requests', updated);

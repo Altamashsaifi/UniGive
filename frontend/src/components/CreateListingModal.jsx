@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { api } from '../services/api';
 import {
   X,
   UploadCloud,
@@ -63,6 +64,7 @@ export default function CreateListingModal({ isOpen, onClose, onSubmit }) {
   });
 
   const [imagePreview, setImagePreview] = useState('');
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -81,6 +83,7 @@ export default function CreateListingModal({ isOpen, onClose, onSubmit }) {
         image_url: '',
       });
       setImagePreview('');
+      setImageFile(null);
       setError('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -101,6 +104,7 @@ export default function CreateListingModal({ isOpen, onClose, onSubmit }) {
         setError('Image file must be under 10MB.');
         return;
       }
+      setImageFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target.result;
@@ -113,6 +117,7 @@ export default function CreateListingModal({ isOpen, onClose, onSubmit }) {
 
   const removeImage = () => {
     setImagePreview('');
+    setImageFile(null);
     setFormData((prev) => ({ ...prev, image_url: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -143,12 +148,20 @@ export default function CreateListingModal({ isOpen, onClose, onSubmit }) {
 
     try {
       setLoading(true);
+      let resolvedImageUrl = formData.image_url;
+      if (imageFile) {
+        const cloudUrl = await api.uploadItemPhoto(imageFile);
+        if (cloudUrl) {
+          resolvedImageUrl = cloudUrl;
+        }
+      }
+
       await onSubmit({
         ...formData,
         price: formData.give_type === 'AMOUNT' ? parseFloat(formData.price) : 0,
         exchange_for: formData.give_type === 'BARTER' ? formData.exchange_for : null,
         image_url:
-          formData.image_url ||
+          resolvedImageUrl ||
           'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
       });
       onClose();

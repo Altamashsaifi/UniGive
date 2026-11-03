@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, ShieldCheck, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, AlertCircle, Sparkles, CheckCircle2, Shield } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose }) {
   const { login, register } = useAuth();
@@ -10,13 +10,49 @@ export default function AuthModal({ isOpen, onClose }) {
     email: '',
     password: '',
     department: '',
-    semester: '',
-    social_handle: '',
+    semester: '1',
   });
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Clear fields and error status whenever modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        full_name: '',
+        email: '',
+        password: '',
+        department: '',
+        semester: '1',
+      });
+      setError('');
+      setSuccessMsg('');
+    }
+  }, [isOpen]);
+
+  // Cleanly switch between Sign In and Registration without carrying over inputs
+  const handleToggleMode = (targetRegister) => {
+    setIsRegister(targetRegister);
+    setFormData({
+      full_name: '',
+      email: '',
+      password: '',
+      department: '',
+      semester: '1',
+    });
+    setError('');
+    setSuccessMsg('');
+  };
+
   if (!isOpen) return null;
+
+  // Admin emails whitelist from environment (comma-separated, e.g. "admin@gmail.com,altamash@gmail.com")
+  const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '')
+    .toLowerCase()
+    .split(',')
+    .map((e) => e.trim())
+    .filter(Boolean);
 
   // Domain verification check
   const isCampusDomain =
@@ -25,22 +61,34 @@ export default function AuthModal({ isOpen, onClose }) {
     formData.email.includes('.ac.in') ||
     formData.email.includes('.edu');
 
+  const isAdminWhitelisted = Boolean(
+    formData.email && adminEmails.includes(formData.email.toLowerCase().trim())
+  );
+
+  const isAllowedToRegister = isCampusDomain || isAdminWhitelisted;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
 
-    if (isRegister && !isCampusDomain) {
-      setError('Registration is restricted to official university domains (@college.ac.in or .edu).');
+    if (isRegister && !isAllowedToRegister) {
+      setError('Registration is restricted to official university domains (@college.ac.in or .edu), unless whitelisted as Admin.');
       return;
     }
 
     try {
       setLoading(true);
       if (isRegister) {
-        await register({
+        const res = await register({
           ...formData,
-          semester: parseInt(formData.semester, 10),
+          department: formData.department || (isAdminWhitelisted ? 'Administration' : 'Engineering'),
+          semester: formData.semester ? parseInt(formData.semester, 10) : 1,
         });
+        if (res?.confirmationRequired) {
+          setSuccessMsg(res.message || 'Please check your email inbox to confirm your account.');
+          return;
+        }
       } else {
         await login(formData.email, formData.password);
       }
@@ -84,13 +132,21 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        {successMsg && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5" autoComplete="off">
           {isRegister && (
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
               <input
                 type="text"
                 required
+                autoComplete="off"
                 placeholder="e.g. Altamash Saifi"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
@@ -99,19 +155,28 @@ export default function AuthModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Email with Domain Badge */}
+          {/* Email with Domain / Admin Badge */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-slate-700">Institutional Email</label>
+              <label className="block text-xs font-bold text-slate-700">
+                {isAdminWhitelisted ? 'Admin Email' : 'Institutional Email'}
+              </label>
               {formData.email && (
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                    isCampusDomain
+                    isAdminWhitelisted
+                      ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                      : isCampusDomain
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-amber-100 text-amber-700'
                   }`}
                 >
-                  {isCampusDomain ? (
+                  {isAdminWhitelisted ? (
+                    <>
+                      <Shield className="w-3 h-3 text-purple-600" />
+                      Admin Authorized
+                    </>
+                  ) : isCampusDomain ? (
                     <>
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       Domain Verified
@@ -128,7 +193,8 @@ export default function AuthModal({ isOpen, onClose }) {
             <input
               type="email"
               required
-              placeholder="e.g. yourname@college.ac.in"
+              autoComplete="off"
+              placeholder={isAdminWhitelisted ? 'e.g. admin@gmail.com' : 'e.g. yourname@college.ac.in'}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -140,6 +206,7 @@ export default function AuthModal({ isOpen, onClose }) {
             <input
               type="password"
               required
+              autoComplete="new-password"
               placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -148,45 +215,30 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
 
           {isRegister && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Department</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CSE / Mechanical"
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Semester</label>
-                  <select
-                    value={formData.semester}
-                    onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                      <option key={s} value={s}>Semester {s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Social Handle <span className="text-slate-400 font-normal">(for direct handoffs)</span>
-                </label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Department</label>
                 <input
                   type="text"
-                  placeholder="@yourhandle"
-                  value={formData.social_handle}
-                  onChange={(e) => setFormData({ ...formData, social_handle: e.target.value })}
-                  className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  placeholder="e.g. CSE / Mechanical"
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
-            </>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Semester</label>
+                <select
+                  value={formData.semester}
+                  onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                    <option key={s} value={s}>Semester {s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           )}
 
           <button
@@ -205,7 +257,7 @@ export default function AuthModal({ isOpen, onClose }) {
               Already registered?{' '}
               <button
                 type="button"
-                onClick={() => setIsRegister(false)}
+                onClick={() => handleToggleMode(false)}
                 className="text-emerald-600 font-bold hover:underline"
               >
                 Sign In
@@ -216,7 +268,7 @@ export default function AuthModal({ isOpen, onClose }) {
               New student on campus?{' '}
               <button
                 type="button"
-                onClick={() => setIsRegister(true)}
+                onClick={() => handleToggleMode(true)}
                 className="text-emerald-600 font-bold hover:underline"
               >
                 Register Account

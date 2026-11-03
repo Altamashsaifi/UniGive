@@ -10,7 +10,8 @@ import {
   Edit3,
   ChevronDown,
   Menu,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 
 export default function Navbar({
@@ -128,10 +129,20 @@ export default function Navbar({
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="group flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-100 transition"
                   >
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center border border-emerald-200 group-hover:ring-2 group-hover:ring-emerald-400 transition">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center border border-emerald-200 group-hover:ring-2 group-hover:ring-emerald-400 transition relative">
                       {user.full_name ? user.full_name[0] : 'U'}
+                      {user.role === 'ADMIN' && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-purple-600 rounded-full border-2 border-white" title="Admin"></span>
+                      )}
                     </div>
-                    <span className="hidden lg:block text-xs font-bold text-slate-800">{user.full_name}</span>
+                    <div className="hidden lg:flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-800">{user.full_name}</span>
+                      {user.role === 'ADMIN' && (
+                        <span className="px-1.5 py-0.2 rounded-md text-[9px] font-extrabold uppercase bg-purple-100 text-purple-800 border border-purple-200">
+                          Admin
+                        </span>
+                      )}
+                    </div>
                     <ChevronDown className={`hidden lg:block w-3.5 h-3.5 text-slate-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
                   </button>
 
@@ -140,8 +151,16 @@ export default function Navbar({
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-fadeIn">
                       {/* User info header */}
                       <div className="px-4 py-2.5 border-b border-slate-100">
-                        <div className="text-sm font-bold text-slate-900">{user.full_name}</div>
-                        <div className="text-[11px] text-emerald-600" style={{ fontFamily: "'Fira Sans', sans-serif" }}>{user.email}</div>
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="text-sm font-bold text-slate-900 truncate">{user.full_name}</div>
+                          {user.role === 'ADMIN' && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-purple-100 text-purple-800 border border-purple-200 shrink-0">
+                              <Shield className="w-2.5 h-2.5" />
+                              <span>Admin</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-emerald-600 truncate" style={{ fontFamily: "'Fira Sans', sans-serif" }}>{user.email}</div>
                       </div>
 
                       {/* Offer Item — visible in dropdown on mobile */}
