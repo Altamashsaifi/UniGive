@@ -11,9 +11,9 @@ export default function Footer() {
           <div className="space-y-2 max-w-lg">
             <div className="flex items-center gap-2.5">
               <img
-                src="/logo.jpg"
+                src="/logo.png"
                 alt="UniGive Logo"
-                className="w-11 h-11 sm:w-12 sm:h-12 object-contain"
+                className="h-11 sm:h-12 w-auto object-contain"
               />
               <span className="text-xl font-black tracking-tight text-slate-900">UniGive</span>
             </div>

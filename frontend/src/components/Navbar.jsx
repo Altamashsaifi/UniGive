@@ -52,12 +52,12 @@ export default function Navbar({
           {/* Logo */}
           <div
             onClick={() => setActiveTab('listings')}
-            className="flex items-center gap-2 cursor-pointer select-none shrink-0 group py-1"
+            className="flex items-center gap-2.5 cursor-pointer select-none shrink-0 group py-1"
           >
             <img
-              src="/logo.jpg"
+              src="/logo.png"
               alt="UniGive Logo"
-              className="h-10 w-10 sm:h-12 sm:w-12 object-contain group-hover:scale-105 transition-transform duration-200"
+              className="h-11 sm:h-13 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
             />
             <span className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent">
               UniGive
