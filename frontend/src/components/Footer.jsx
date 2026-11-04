@@ -10,14 +10,12 @@ export default function Footer() {
           {/* Brand & Mission */}
           <div className="space-y-2 max-w-lg">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl overflow-hidden bg-white shadow-sm border border-slate-200/80 flex items-center justify-center p-0.5">
-                <img
-                  src="/logo.jpg"
-                  alt="UniGive Logo"
-                  className="w-full h-full object-contain rounded-lg"
-                />
-              </div>
-              <span className="text-lg font-black tracking-tight text-slate-900">UniGive</span>
+              <img
+                src="/logo.jpg"
+                alt="UniGive Logo"
+                className="w-11 h-11 sm:w-12 sm:h-12 object-contain"
+              />
+              <span className="text-xl font-black tracking-tight text-slate-900">UniGive</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
               Intra-university peer-to-peer redistribution network. Extending equipment lifecycles, reducing campus waste, and supporting budget-conscious students with zero shipping overhead.
