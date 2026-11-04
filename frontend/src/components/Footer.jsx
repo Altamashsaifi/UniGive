@@ -13,7 +13,7 @@ export default function Footer() {
               <img
                 src="/logo.png"
                 alt="UniGive Logo"
-                className="h-11 sm:h-12 w-auto object-contain"
+                className="h-12 sm:h-13 w-auto object-contain no-outline !outline-none"
               />
               <span className="text-xl font-black tracking-tight text-slate-900">UniGive</span>
             </div>

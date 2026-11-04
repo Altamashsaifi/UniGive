@@ -116,7 +116,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ─── Image outlines (make-interfaces-feel-better #11) ─── */
-img {
+img:not(.no-outline):not([alt*="Logo"]):not([alt*="logo"]) {
   outline: 1px solid oklch(0 0 0 / 0.08);
   outline-offset: -1px;
 }

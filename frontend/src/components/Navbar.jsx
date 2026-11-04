@@ -57,7 +57,7 @@ export default function Navbar({
             <img
               src="/logo.png"
               alt="UniGive Logo"
-              className="h-11 sm:h-13 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
+              className="h-12 sm:h-14 w-auto object-contain no-outline !outline-none group-hover:scale-105 transition-transform duration-200"
             />
             <span className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-700 bg-clip-text text-transparent">
               UniGive

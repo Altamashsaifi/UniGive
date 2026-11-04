@@ -110,7 +110,7 @@ export default function AuthModal({ isOpen, onClose }) {
             <img
               src="/logo.png"
               alt="UniGive Logo"
-              className="h-12 sm:h-14 w-auto object-contain shrink-0"
+              className="h-14 sm:h-16 w-auto object-contain shrink-0 no-outline !outline-none"
             />
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
