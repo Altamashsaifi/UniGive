@@ -106,12 +106,12 @@ export default function AuthModal({ isOpen, onClose }) {
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-              <ShieldCheck className="w-5 h-5" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white shadow-sm border border-slate-200/80 flex items-center justify-center p-0.5 shrink-0">
+              <img src="/logo.jpg" alt="UniGive Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 {isRegister ? 'Campus Registration' : 'Campus Sign In'}
               </h2>
               <p className="text-xs text-slate-500">Intra-University Verified Network</p>

@@ -9,9 +9,13 @@ export default function Footer() {
 
           {/* Brand & Mission */}
           <div className="space-y-2 max-w-lg">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm">
-                <Package className="w-5 h-5" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl overflow-hidden bg-white shadow-sm border border-slate-200/80 flex items-center justify-center p-0.5">
+                <img
+                  src="/logo.jpg"
+                  alt="UniGive Logo"
+                  className="w-full h-full object-contain rounded-lg"
+                />
               </div>
               <span className="text-lg font-black tracking-tight text-slate-900">UniGive</span>
             </div>
