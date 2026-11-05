@@ -13,10 +13,25 @@ import CreateRequestModal from './components/CreateRequestModal';
 import EditProfileModal from './components/EditProfileModal';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
+import NotFound from './components/NotFound';
 import { Sparkles, PackageOpen } from 'lucide-react';
 
 export default function App() {
   const { user, token } = useAuth();
+
+  // Route & 404 detection
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => setCurrentPath(window.location.pathname);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  const isNotFound = useMemo(() => {
+    const clean = (currentPath || '/').replace(/\/+$/, '') || '/';
+    return clean !== '/' && clean !== '/index.html';
+  }, [currentPath]);
 
   // Navigation tab: 'listings' | 'requests' | 'my-activity'
   const [activeTab, setActiveTab] = useState('listings');
@@ -165,6 +180,18 @@ export default function App() {
     setConditionFilter('');
     setStatusFilter('AVAILABLE');
   };
+
+  if (isNotFound) {
+    return (
+      <NotFound
+        onGoHome={() => {
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+          setActiveTab('listings');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
