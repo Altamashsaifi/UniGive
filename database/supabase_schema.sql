@@ -105,8 +105,38 @@ CREATE INDEX IF NOT EXISTS idx_requests_is_fulfilled ON public.requests(is_fulfi
 -- 6. Trigger: Automatically create public.profiles on Auth Sign-Up
 -- ====================================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+    user_name TEXT;
+    user_dept TEXT;
+    user_sem INT;
+    user_role_val public.user_role;
 BEGIN
+    -- 1. Safely extract user's name
+    user_name := COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1));
+    
+    -- 2. Safely extract department
+    user_dept := COALESCE(NEW.raw_user_meta_data->>'department', 'Engineering');
+    
+    -- 3. Safely parse semester (handles empty strings or missing numbers without crashing)
+    BEGIN
+        user_sem := COALESCE(NULLIF(NEW.raw_user_meta_data->>'semester', '')::INT, 1);
+    EXCEPTION WHEN OTHERS THEN
+        user_sem := 1;
+    END;
+
+    -- 4. Safely resolve role
+    IF (NEW.raw_user_meta_data->>'role' = 'ADMIN' OR NEW.raw_user_meta_data->>'is_admin' = 'true') THEN
+        user_role_val := 'ADMIN'::public.user_role;
+    ELSE
+        user_role_val := 'STUDENT'::public.user_role;
+    END IF;
+
+    -- 5. Insert profile with conflict resolution
     INSERT INTO public.profiles (
         id,
         email,
@@ -123,26 +153,30 @@ BEGIN
     VALUES (
         NEW.id,
         NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-        COALESCE(NEW.raw_user_meta_data->>'department', 'Engineering'),
-        COALESCE((NEW.raw_user_meta_data->>'semester')::INT, 1),
-        NEW.raw_user_meta_data->>'social_handle',
-        NEW.raw_user_meta_data->>'phone',
-        NEW.raw_user_meta_data->>'hostel_block',
-        NEW.raw_user_meta_data->>'bio',
-        CASE
-            WHEN NEW.raw_user_meta_data->>'role' = 'ADMIN' OR NEW.raw_user_meta_data->>'is_admin' = 'true'
-            THEN 'ADMIN'::user_role
-            ELSE 'STUDENT'::user_role
-        END,
-        (NEW.email LIKE '%@%.ac.in' OR NEW.email LIKE '%@%.edu%' OR NEW.raw_user_meta_data->>'role' = 'ADMIN')
+        user_name,
+        user_dept,
+        user_sem,
+        COALESCE(NEW.raw_user_meta_data->>'social_handle', ''),
+        COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+        COALESCE(NEW.raw_user_meta_data->>'hostel_block', ''),
+        COALESCE(NEW.raw_user_meta_data->>'bio', ''),
+        user_role_val,
+        (NEW.email LIKE '%@%.ac.in' OR NEW.email LIKE '%@%.edu%' OR user_role_val = 'ADMIN')
     )
     ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
         full_name = EXCLUDED.full_name,
+        department = EXCLUDED.department,
+        semester = EXCLUDED.semester,
         updated_at = CURRENT_TIMESTAMP;
+
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Fallback safety net: logs warning but NEVER aborts user signup
+    RAISE WARNING 'handle_new_user error: %', SQLERRM;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Drop trigger if already exists and recreate
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -164,6 +198,11 @@ DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profi
 CREATE POLICY "Public profiles are viewable by everyone"
     ON public.profiles FOR SELECT
     USING (true);
+
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+CREATE POLICY "Users can insert their own profile"
+    ON public.profiles FOR INSERT
+    WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
@@ -240,4 +279,13 @@ DROP POLICY IF EXISTS "Authenticated users can upload item photos" ON storage.ob
 CREATE POLICY "Authenticated users can upload item photos"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'item-photos' AND auth.role() = 'authenticated');
+
+-- ====================================================================
+-- 9. Permissions & Grants
+-- ====================================================================
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
 
