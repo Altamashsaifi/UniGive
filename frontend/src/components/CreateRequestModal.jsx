@@ -19,7 +19,7 @@ export default function CreateRequestModal({ isOpen, onClose, onSubmit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Requirement 3: Clear previous details whenever user opens new request form
+  // Reset form on open
   useEffect(() => {
     if (isOpen) {
       setFormData({

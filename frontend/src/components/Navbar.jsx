@@ -28,7 +28,7 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profileRef = useRef(null);
 
-  // Close profile dropdown when clicking outside
+  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -64,7 +64,7 @@ export default function Navbar({
             </span>
           </div>
 
-          {/* Center Tabs — hidden on mobile */}
+          {/* Tabs */}
           <nav className="hidden md:flex items-center bg-slate-100 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('listings')}

@@ -35,7 +35,7 @@ export default function ListingCard({ listing, currentUser, onUpdateStatus, onDe
   const [showContactModal, setShowContactModal] = useState(false);
   const [confirmAdminDelete, setConfirmAdminDelete] = useState(false);
 
-  // Strict check: only the giver who posted this item can change its availability
+  // Ownership check
   const isGiver =
     currentUser &&
     (currentUser.id === listing.donor_id ||
@@ -43,7 +43,7 @@ export default function ListingCard({ listing, currentUser, onUpdateStatus, onDe
 
   const isAdmin = currentUser?.role === 'ADMIN';
 
-  // Requirement 2: When clicking contact giver, if not signed in, tell them to sign in first
+  // Auth check
   const handleContactClick = () => {
     if (!currentUser) {
       if (onRequireAuth) {
@@ -296,7 +296,7 @@ export default function ListingCard({ listing, currentUser, onUpdateStatus, onDe
                 </div>
               )}
 
-              {/* Requirement 5: Instagram Direct Link */}
+              {/* Instagram */}
               {listing.donor_social_handle && (
                 <a
                   href={`https://instagram.com/${listing.donor_social_handle.replace('@', '')}`}

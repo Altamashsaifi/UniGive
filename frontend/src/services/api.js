@@ -1,6 +1,4 @@
-// UniGive Frontend API Client
-// Connects to Supabase Cloud Database & Auth, with seamless fallback to Express / LocalStorage
-
+// API client
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const API_BASE = '/api';
@@ -182,7 +180,7 @@ export async function checkBackendHealth() {
 }
 
 export const api = {
-  // Upload item photo to Supabase Free Tier storage bucket ('item-photos')
+  // Upload photo
   async uploadItemPhoto(file) {
     if (isSupabaseConfigured && supabase && file) {
       try {
@@ -303,7 +301,7 @@ export const api = {
   },
 
   async getListings(token, filters = {}) {
-    // 1. Supabase Cloud Database Query
+    // Database query
     if (isSupabaseConfigured && supabase) {
       try {
         let query = supabase
@@ -367,7 +365,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const params = new URLSearchParams();
@@ -389,7 +387,7 @@ export const api = {
       console.warn('Backend getListings failed, using local storage:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     let list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     if (filters.donor_id) {
       list = list.filter((i) => i.donor_id === filters.donor_id);
@@ -417,7 +415,7 @@ export const api = {
   },
 
   async createListing(token, listingData, currentUser) {
-    // 1. Supabase Cloud Database Insert
+    // Database insert
     if (isSupabaseConfigured && supabase && currentUser?.id) {
       try {
         const payload = {
@@ -468,7 +466,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/listings`, {
@@ -488,7 +486,7 @@ export const api = {
       console.warn('Backend createListing failed, saving locally:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     const newListing = {
       id: 'l-' + Date.now(),
@@ -511,7 +509,7 @@ export const api = {
   },
 
   async updateListingStatus(token, id, status) {
-    // 1. Supabase Cloud Database Status Update
+    // Database status update
     if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
@@ -531,7 +529,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/listings/${id}`, {
@@ -557,7 +555,7 @@ export const api = {
       console.warn('Backend updateListingStatus failed, updating local storage:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     const target = list.find((i) => i.id === id);
     if (target) {
@@ -568,7 +566,7 @@ export const api = {
   },
 
   async deleteListing(token, id) {
-    // 1. Supabase Cloud Database Delete
+    // Database delete
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase.from('listings').delete().eq('id', id);
@@ -579,7 +577,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/listings/${id}`, {
@@ -597,7 +595,7 @@ export const api = {
       console.warn('Backend deleteListing failed, updating local storage:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     const list = getLocalData('unigive_listings', INITIAL_LISTINGS);
     const updated = list.filter((i) => i.id !== id);
     setLocalData('unigive_listings', updated);
@@ -605,7 +603,7 @@ export const api = {
   },
 
   async getRequests(token, filters = {}) {
-    // 1. Supabase Cloud Database Query
+    // Database query
     if (isSupabaseConfigured && supabase) {
       try {
         let query = supabase
@@ -655,7 +653,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const params = new URLSearchParams();
@@ -675,7 +673,7 @@ export const api = {
       console.warn('Backend getRequests failed, using local storage:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     let list = getLocalData('unigive_requests', INITIAL_REQUESTS);
     if (filters.seeker_id) {
       list = list.filter((i) => i.seeker_id === filters.seeker_id);
@@ -695,7 +693,7 @@ export const api = {
   },
 
   async createRequest(token, requestData, currentUser) {
-    // 1. Supabase Cloud Database Insert
+    // Database insert
     if (isSupabaseConfigured && supabase && currentUser?.id) {
       try {
         const payload = {
@@ -737,7 +735,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/requests`, {
@@ -757,7 +755,7 @@ export const api = {
       console.warn('Backend createRequest failed, saving locally:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     const list = getLocalData('unigive_requests', INITIAL_REQUESTS);
     const newReq = {
       id: 'r-' + Date.now(),
@@ -776,7 +774,7 @@ export const api = {
   },
 
   async deleteRequest(token, id) {
-    // 1. Supabase Cloud Database Delete
+    // Database delete
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase.from('requests').delete().eq('id', id);
@@ -787,7 +785,7 @@ export const api = {
       }
     }
 
-    // 2. Express Backend Fallback
+    // Backend fallback
     try {
       if (isBackendLive && token) {
         const res = await fetch(`${API_BASE}/requests/${id}`, {
@@ -805,7 +803,7 @@ export const api = {
       console.warn('Backend deleteRequest failed, removing locally:', e);
     }
 
-    // 3. LocalStorage Fallback
+    // Local fallback
     const list = getLocalData('unigive_requests', INITIAL_REQUESTS);
     const updated = list.filter((i) => i.id !== id);
     setLocalData('unigive_requests', updated);

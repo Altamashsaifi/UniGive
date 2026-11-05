@@ -68,7 +68,7 @@ export default function CreateListingModal({ isOpen, onClose, onSubmit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Requirement 3: Clear previous details whenever user opens new offer form
+  // Reset form on open
   useEffect(() => {
     if (isOpen) {
       setFormData({

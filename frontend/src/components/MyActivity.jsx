@@ -31,7 +31,7 @@ export default function MyActivity({
   const [subTab, setSubTab] = useState('offers'); // 'offers' | 'requests'
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-  // Requirement 7: When user goes to My Activity section and is not signed in, tell them to sign in
+  // Auth gate
   if (!currentUser) {
     return (
       <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-14 text-center max-w-lg mx-auto my-8 shadow-sm animate-fadeIn">
@@ -53,8 +53,7 @@ export default function MyActivity({
     );
   }
 
-  // Requirement 1: Filter ALL offers belonging to the current user regardless of status
-  // Changing status to RESERVED or CLAIMED will NOT remove the post from My Activity!
+  // User offers
   const myOffers = listings.filter(
     (item) =>
       item.donor_id === currentUser?.id ||
@@ -233,10 +232,10 @@ export default function MyActivity({
                     </div>
                   </div>
 
-                  {/* Actions: Update Availability + Take Down (Requirement 1 & 3) */}
+                  {/* Actions */}
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                     
-                    {/* Status Select: Changing status preserves the post in My Activity! */}
+                    {/* Status select */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-700">Availability:</span>
                       <select

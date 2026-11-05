@@ -17,7 +17,7 @@ export default function AuthModal({ isOpen, onClose }) {
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Clear fields and error status whenever modal is opened
+  // Reset on open
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -33,7 +33,7 @@ export default function AuthModal({ isOpen, onClose }) {
     }
   }, [isOpen]);
 
-  // Cleanly switch between Sign In and Registration without carrying over inputs
+  // Mode toggle
   const handleToggleMode = (targetRegister) => {
     setIsRegister(targetRegister);
     setFormData({
@@ -50,14 +50,14 @@ export default function AuthModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  // Admin emails whitelist from environment (comma-separated, e.g. "admin@gmail.com)
+  // Admin whitelist
   const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '')
     .toLowerCase()
     .split(',')
     .map((e) => e.trim())
     .filter(Boolean);
 
-  // Domain verification check
+  // Domain check
   const isCampusDomain =
     formData.email.endsWith('.ac.in') ||
     formData.email.endsWith('.edu') ||

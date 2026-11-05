@@ -17,7 +17,7 @@ export default function EditProfileModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Sync form inputs with active profile every time modal opens or user data changes
+  // Sync profile data
   useEffect(() => {
     if (isOpen && user) {
       setFormData({
@@ -137,7 +137,7 @@ export default function EditProfileModal({ isOpen, onClose }) {
             />
           </div>
 
-          {/* Requirement 5: Keep ONLY Instagram Handle in social contact section */}
+          {/* Social handle */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1.5">

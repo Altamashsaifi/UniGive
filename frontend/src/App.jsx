@@ -61,13 +61,13 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Requirement 2 & 7: Helper to require sign-in
+  // Auth guard
   const handleRequireAuth = (message = 'Please sign in with your campus account (@college.ac.in) to continue.') => {
     showToast(message, 'info');
     setIsAuthOpen(true);
   };
 
-  // Requirement 1: Fetch ALL listings without restricting by status so MyActivity retains them
+  // Fetch listings and requests
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -76,7 +76,7 @@ export default function App() {
           category: selectedCategory,
           search: searchQuery,
           condition: conditionFilter,
-          status: 'ALL', // Fetch all statuses so status changes never remove posts from My Activity
+          status: 'ALL',
         }),
         api.getRequests(token, {
           category: selectedCategory,
@@ -96,13 +96,13 @@ export default function App() {
     fetchData();
   }, [token, selectedCategory, searchQuery, conditionFilter]);
 
-  // Filter listings for the Giveaways Feed tab based on statusFilter
+  // Feed filter
   const feedListings = useMemo(() => {
     if (statusFilter === 'ALL') return listings;
     return listings.filter((item) => item.status === statusFilter);
   }, [listings, statusFilter]);
 
-  // Compute category counts for badge indicators
+  // Category counts
   const categoryCounts = useMemo(() => {
     const counts = { ALL: feedListings.length };
     feedListings.forEach((item) => {
@@ -111,7 +111,7 @@ export default function App() {
     return counts;
   }, [feedListings]);
 
-  // Compute my personal activity count
+  // User activity count
   const myActivityCount = useMemo(() => {
     if (!user) return 0;
     const myOffersCount = listings.filter(
@@ -127,7 +127,7 @@ export default function App() {
     return myOffersCount + myRequestsCount;
   }, [listings, requests, user]);
 
-  // Handlers
+  // Actions
   const handleCreateListing = async (listingData) => {
     if (!user) {
       handleRequireAuth('Please sign in to offer an item.');
@@ -149,7 +149,7 @@ export default function App() {
   };
 
   const handleUpdateStatus = async (id, status) => {
-    // Optimistically update state so status change is instant in both Feed and My Activity
+    // Update local state
     setListings((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
     );
@@ -289,11 +289,11 @@ export default function App() {
           />
         )}
 
-        {/* Tab 3: My Campus Activity (Requirement 1 & 7) */}
+        {/* Tab 3: My Activity */}
         {activeTab === 'my-activity' && (
           <MyActivity
             currentUser={user}
-            listings={listings} // Receives all listings so changing status never removes the post
+            listings={listings}
             requests={requests}
             onUpdateStatus={handleUpdateStatus}
             onDeleteListing={handleDeleteListing}
@@ -305,7 +305,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer (Requirement 8) */}
+      {/* Footer */}
       <Footer />
 
       {/* Modals */}

@@ -21,18 +21,13 @@ export default function Footer() {
               Intra-university peer-to-peer redistribution network. Extending equipment lifecycles, reducing campus waste, and supporting budget-conscious students with zero shipping overhead.
             </p>
           </div>
-
-          {/* Project Team */}
-          
-
         </div>
 
-        {/* Bottom Copyright */}
+        {/* Copyright */}
         <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
           <div>
             &copy; {new Date().getFullYear()} UniGive Platform. All rights reserved.
           </div>
-          
         </div>
       </div>
     </footer>

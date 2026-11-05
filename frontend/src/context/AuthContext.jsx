@@ -10,18 +10,18 @@ export const AuthProvider = ({ children }) => {
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { return null; }
     }
-    // If Supabase is not configured, supply default demo student for zero-friction local exploration
+    // Local fallback
     if (!isSupabaseConfigured) {
       return {
         id: '11111111-1111-4111-a111-111111111111',
-        full_name: 'Altamash Saifi',
-        email: 'altamash@college.ac.in',
+        full_name: 'Student User',
+        email: 'student@college.ac.in',
         department: 'Computer Science & Engineering',
         semester: 5,
-        social_handle: '@altamash_dev',
-        phone: '+91 98765 43210',
-        hostel_block: 'Hostel B, Room 214',
-        bio: '5th Sem CSE student passionate about open source and campus sustainability.',
+        social_handle: '',
+        phone: '',
+        hostel_block: '',
+        bio: '',
         role: 'STUDENT',
         is_verified: true,
       };
@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
   const [backendStatus, setBackendStatus] = useState(isSupabaseConfigured ? 'supabase' : 'checking');
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
-  // Helper to fetch profile from Supabase
+  // Fetch profile
   const fetchSupabaseProfile = async (authUser) => {
     if (!authUser || !supabase) return null;
     try {
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
       const metadata = authUser.user_metadata || {};
       const effectiveRole = isWhitelistedAdmin ? 'ADMIN' : (profile.role || metadata.role || 'STUDENT');
 
-      // If whitelisted as admin, sync database role to ADMIN
+      // Admin sync
       if (isWhitelistedAdmin && profile.role !== 'ADMIN') {
         supabase
           .from('profiles')
@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (isSupabaseConfigured && supabase) {
-      // 1. Get initial active session
+      // Session init
       supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session?.user) {
           const profile = await fetchSupabaseProfile(session.user);
@@ -106,7 +106,6 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('unigive_user', JSON.stringify(profile));
           localStorage.setItem('unigive_token', session.access_token);
         } else {
-          // If no active Supabase session, clear local storage
           setUser(null);
           setToken(null);
           localStorage.removeItem('unigive_user');
@@ -115,7 +114,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       });
 
-      // 2. Listen to live Supabase Auth state changes
+      // Auth change listener
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
           const profile = await fetchSupabaseProfile(session.user);
@@ -136,7 +135,7 @@ export const AuthProvider = ({ children }) => {
         subscription.unsubscribe();
       };
     } else {
-      // If Supabase not yet configured, check local backend server health
+      // Local health check
       checkBackendHealth().then((live) => {
         setBackendStatus(live ? 'online' : 'offline');
       });
@@ -163,7 +162,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: profile, token: data.session.access_token };
     }
 
-    // Fallback if Supabase credentials are not added yet
+    // Fallback login
     const res = await api.login(email, password);
     setUser(res.user);
     setToken(res.token);
@@ -203,7 +202,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error(error.message);
       }
 
-      // If email confirmation is required by Supabase free tier settings
+      // Check email confirmation requirement
       if (data.user && !data.session) {
         return {
           success: true,
@@ -221,7 +220,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: profile, token: data.session?.access_token };
     }
 
-    // Fallback if Supabase credentials are not added yet
+    // Fallback registration
     const res = await api.register(userData);
     setUser(res.user);
     setToken(res.token);
@@ -258,7 +257,7 @@ export const AuthProvider = ({ children }) => {
       return merged;
     }
 
-    // Fallback update
+    // Fallback profile update
     const updated = await api.updateProfile(token, profileData);
     const merged = { ...user, ...profileData, ...updated };
     setUser(merged);
