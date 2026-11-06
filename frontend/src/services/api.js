@@ -103,6 +103,66 @@ const INITIAL_LISTINGS = [
     donor_social_handle: '@altamash_dev',
     donor_hostel_block: 'Hostel B, Room 214',
     created_at: new Date(Date.now() - 3600000 * 60).toISOString(),
+  },
+  {
+    id: 'l-6',
+    title: 'Introduction to Algorithms (CLRS 3rd Edition)',
+    description: 'Comprehensive core text for Data Structures & Algorithms. Clean pages, hardcover edition in great condition.',
+    category: 'BOOKS',
+    condition: 'LIKE_NEW',
+    give_type: 'FREE',
+    price: 0,
+    exchange_for: null,
+    image_url: 'https://images.unsplash.com/photo-1532012164546-f432f2e3edd4?w=600&auto=format&fit=crop&q=80',
+    pickup_location: 'Central Library - Circulation Desk',
+    status: 'AVAILABLE',
+    donor_id: '11111111-1111-4111-a111-111111111111',
+    donor_name: 'Altamash Saifi',
+    donor_email: 'altamash@college.ac.in',
+    donor_department: 'Computer Science & Engineering',
+    donor_social_handle: '@altamash_dev',
+    donor_hostel_block: 'Hostel B, Room 214',
+    created_at: new Date(Date.now() - 3600000 * 72).toISOString(),
+  },
+  {
+    id: 'l-7',
+    title: 'Rotring & Staedtler Technical Drafting Stencil Set (Circle + Isometric)',
+    description: 'Essential drafting tools for Engineering Graphics assignments. Includes circle templates, ellipse guide, and compass adapter.',
+    category: 'STATIONERY',
+    condition: 'GOOD',
+    give_type: 'FREE',
+    price: 0,
+    exchange_for: null,
+    image_url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&auto=format&fit=crop&q=80',
+    pickup_location: 'Academic Block 2 - Architecture Studio',
+    status: 'AVAILABLE',
+    donor_id: '22222222-2222-4222-a222-222222222222',
+    donor_name: 'Abhishek Sharma',
+    donor_email: 'abhishek@college.ac.in',
+    donor_department: 'Electronics & Comm.',
+    donor_social_handle: '@abhi_builds',
+    donor_hostel_block: 'Hostel A, Room 102',
+    created_at: new Date(Date.now() - 3600000 * 80).toISOString(),
+  },
+  {
+    id: 'l-8',
+    title: 'Rechargeable LED Desk Study Lamp (Warm/Cool 3-Level Dimming)',
+    description: 'Foldable study lamp with built-in USB rechargeable battery. Great for late-night exam prep in hostel rooms.',
+    category: 'OTHER',
+    condition: 'LIKE_NEW',
+    give_type: 'AMOUNT',
+    price: 120,
+    exchange_for: null,
+    image_url: 'https://images.unsplash.com/photo-1534353436294-0dbd4bdac845?w=600&auto=format&fit=crop&q=80',
+    pickup_location: 'Hostel Block B - Reception Area',
+    status: 'AVAILABLE',
+    donor_id: '33333333-3333-4333-a333-333333333333',
+    donor_name: 'Afifa Khan',
+    donor_email: 'afifa@college.ac.in',
+    donor_department: 'Mechanical Engineering',
+    donor_social_handle: '@afifa_tech',
+    donor_hostel_block: 'Girls Hostel Block 2',
+    created_at: new Date(Date.now() - 3600000 * 96).toISOString(),
   }
 ];
 
@@ -155,7 +215,12 @@ function getLocalData(key, fallback) {
     return fallback;
   }
   try {
-    return JSON.parse(item);
+    const parsed = JSON.parse(item);
+    if (Array.isArray(parsed) && parsed.length === 0) {
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
+    }
+    return parsed;
   } catch (e) {
     return fallback;
   }
@@ -348,7 +413,7 @@ export const api = {
         }
 
         const { data, error } = await query;
-        if (!error && Array.isArray(data)) {
+        if (!error && Array.isArray(data) && data.length > 0) {
           return data.map((item) => ({
             ...item,
             donor_name: item.profiles?.full_name || 'Campus Student',
@@ -637,7 +702,7 @@ export const api = {
         }
 
         const { data, error } = await query;
-        if (!error && Array.isArray(data)) {
+        if (!error && Array.isArray(data) && data.length > 0) {
           return data.map((req) => ({
             ...req,
             seeker_name: req.profiles?.full_name || 'Campus Student',
