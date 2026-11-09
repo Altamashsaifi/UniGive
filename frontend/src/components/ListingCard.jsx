@@ -34,6 +34,17 @@ const CATEGORY_NAMES = {
 export default function ListingCard({ listing, currentUser, onUpdateStatus, onDeleteListing, onRequireAuth }) {
   const [showContactModal, setShowContactModal] = useState(false);
   const [confirmAdminDelete, setConfirmAdminDelete] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const handleCopyEmail = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (listing.donor_email) {
+      navigator.clipboard.writeText(listing.donor_email);
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2200);
+    }
+  };
 
   // Ownership check
   const isGiver =
@@ -316,14 +327,30 @@ export default function ListingCard({ listing, currentUser, onUpdateStatus, onDe
                 href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(listing.donor_email)}&su=${encodeURIComponent(`UniGive: Interested in ${listing.title}`)}&body=${encodeURIComponent(`Hi,\n\nI saw your listing for "${listing.title}" on UniGive and would like to arrange an in-person handoff at ${listing.pickup_location || 'campus'}.\n\nThanks!`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-900 hover:bg-red-100 transition font-bold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(listing.donor_email)}&su=${encodeURIComponent(`UniGive: Interested in ${listing.title}`)}&body=${encodeURIComponent(`Hi,\n\nI saw your listing for "${listing.title}" on UniGive and would like to arrange an in-person handoff at ${listing.pickup_location || 'campus'}.\n\nThanks!`)}`;
+                  window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+                }}
+                className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-900 hover:bg-red-100 transition font-bold cursor-pointer"
               >
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-red-600" />
-                  <span className="truncate">Gmail: {listing.donor_email}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Mail className="w-4 h-4 text-red-600 shrink-0" />
+                  <span className="truncate">Open in Gmail</span>
                 </div>
-                <ExternalLink className="w-3.5 h-3.5 text-red-500" />
+                <ExternalLink className="w-3.5 h-3.5 text-red-500 shrink-0" />
               </a>
+
+              <div className="flex items-center justify-between px-1 pt-1 text-[11px] text-slate-500">
+                <span className="truncate max-w-[190px] font-mono text-[10px]">{listing.donor_email}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline shrink-0"
+                >
+                  {copiedEmail ? 'Copied!' : 'Copy Address'}
+                </button>
+              </div>
             </div>
 
             <button
