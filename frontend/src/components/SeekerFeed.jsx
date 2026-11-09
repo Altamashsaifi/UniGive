@@ -168,11 +168,10 @@ export default function SeekerFeed({ requests, onOpenCreateRequest, currentUser,
                         const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(req.seeker_email)}&su=${encodeURIComponent(`UniGive: I have ${req.title}`)}&body=${encodeURIComponent(`Hi,\n\nI saw your wishlist request for "${req.title}" on UniGive. I have this item and would like to arrange an in-person handoff.\n\nThanks!`)}`;
                         window.open(gmailUrl, '_blank', 'noopener,noreferrer');
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-lg text-xs font-bold text-red-900 hover:bg-red-100 transition shadow-xs cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition shadow-xs cursor-pointer"
                     >
-                      <Mail className="w-3.5 h-3.5 text-red-600" />
-                      <span>Gmail Seeker</span>
-                      <ExternalLink className="w-2.5 h-2.5 text-red-500" />
+                      <Mail className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Email Seeker</span>
                     </a>
                   </div>
                 </div>
