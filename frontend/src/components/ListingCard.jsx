@@ -313,14 +313,16 @@ export default function ListingCard({ listing, currentUser, onUpdateStatus, onDe
               )}
 
               <a
-                href={`mailto:${listing.donor_email}?subject=UniGive: Interested in ${encodeURIComponent(listing.title)}`}
-                className="flex items-center justify-between p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 hover:bg-slate-200 transition font-bold"
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(listing.donor_email)}&su=${encodeURIComponent(`UniGive: Interested in ${listing.title}`)}&body=${encodeURIComponent(`Hi,\n\nI saw your listing for "${listing.title}" on UniGive and would like to arrange an in-person handoff at ${listing.pickup_location || 'campus'}.\n\nThanks!`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-900 hover:bg-red-100 transition font-bold"
               >
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-slate-600" />
-                  <span className="truncate">{listing.donor_email}</span>
+                  <Mail className="w-4 h-4 text-red-600" />
+                  <span className="truncate">Gmail: {listing.donor_email}</span>
                 </div>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                <ExternalLink className="w-3.5 h-3.5 text-red-500" />
               </a>
             </div>
 
